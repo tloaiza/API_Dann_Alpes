@@ -18,6 +18,10 @@ app.add_middleware(
 
 
 
+client = MongoClient(os.environ["MONGO_URI"])
+db = client["ISIS2304E11202610"]
+
+
 @app.get("/")
 def inicio():
     return {"estado": "API funcionando correctamente"}
