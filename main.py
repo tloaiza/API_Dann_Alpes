@@ -1,13 +1,12 @@
-
-from fastapi import FastAPI
+from fastapi import FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime
 import os
-
+ 
 app = FastAPI()
-
+ 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,24 +14,19 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-
-#os.environ para despliegue. Descomente cuando ya probó todo local.
+ 
 client = MongoClient(os.environ["MONGO_URI"])
-
-# db = client["ISIS*******"]
 db = client["ISIS2304E11202610"]
-
-
+ 
+ 
 @app.get("/")
 def inicio():
     return {"estado": "API funcionando correctamente"}
  
  
-# RESEÑAS DANN-ALPES 
- 
 # RF1 -- Crear reseña
 @app.post('/resenas')
-def crear_resena(datos: dict):
+def crear_resena(datos: dict = Body(...)):
     existente = db["resenas"].find_one({"reserva_id": datos.get("reserva_id")})
     if existente:
         return {"mensaje": "Ya existe una reseña para esta reserva"}
@@ -50,7 +44,7 @@ def crear_resena(datos: dict):
  
 # RF2 -- Editar reseña (cliente edita texto y calificación)
 @app.put('/resenas/{resena_id}')
-def editar_resena(resena_id: str, datos: dict):
+def editar_resena(resena_id: str, datos: dict = Body(...)):
     db["resenas"].update_one(
         {"_id": ObjectId(resena_id)},
         {"$set": {
@@ -71,7 +65,7 @@ def eliminar_resena_cliente(resena_id: str):
     return {"mensaje": "Reseña eliminada exitosamente"}
  
  
-# RF4 --  Consultar reseñas de un hotel (público, paginado, ordenado)
+# RF4 -- Consultar reseñas de un hotel
 @app.get('/hoteles/{hotel_id}/resenas')
 def get_resenas_hotel(hotel_id: int, orden: str = "fecha", pagina: int = 1, por_pagina: int = 10):
     campo_orden = "fecha_creacion" if orden == "fecha" else "votos_util"
@@ -91,15 +85,22 @@ def get_resenas_hotel(hotel_id: int, orden: str = "fecha", pagina: int = 1, por_
  
     for i in destacadas + normales:
         i["_id"] = str(i["_id"])
+        if i.get("fecha_creacion"):
+            i["fecha_creacion"] = i["fecha_creacion"].isoformat()
+        if i.get("respuesta_admin") and i["respuesta_admin"].get("fecha"):
+            i["respuesta_admin"]["fecha"] = i["respuesta_admin"]["fecha"].isoformat()
  
     return {"resenas": destacadas + normales}
  
  
 # RF5 -- Marcar reseña como útil
 @app.post('/resenas/{resena_id}/voto')
-def votar_resena(resena_id: str, datos: dict):
+def votar_resena(resena_id: str, datos: dict = Body(...)):
     usuario_id = datos.get("usuario_id")
+ 
     resena = db["resenas"].find_one({"_id": ObjectId(resena_id)})
+    if not resena:
+        return {"mensaje": "Reseña no encontrada"}
  
     if usuario_id in resena.get("votantes", []):
         return {"mensaje": "El usuario ya votó por esta reseña"}
@@ -126,13 +127,15 @@ def get_resenas_usuario(usuario_id: int, orden: str = "fecha"):
  
     for i in resenas:
         i["_id"] = str(i["_id"])
+        if i.get("fecha_creacion"):
+            i["fecha_creacion"] = i["fecha_creacion"].isoformat()
  
     return {"resenas": resenas}
  
  
 # RF7 -- Responder reseña (administrador)
 @app.put('/resenas/{resena_id}/respuesta')
-def responder_resena(resena_id: str, datos: dict):
+def responder_resena(resena_id: str, datos: dict = Body(...)):
     db["resenas"].update_one(
         {"_id": ObjectId(resena_id)},
         {"$set": {
@@ -159,17 +162,16 @@ def eliminar_resena_admin(resena_id: str):
 @app.put('/resenas/{resena_id}/destacar')
 def destacar_resena(resena_id: str):
     resena = db["resenas"].find_one({"_id": ObjectId(resena_id)})
+    if not resena:
+        return {"mensaje": "Reseña no encontrada"}
  
-    # Quitar destacada de cualquier otra reseña del mismo hotel
     db["resenas"].update_many(
         {"hotel_id": resena["hotel_id"], "destacada": True},
         {"$set": {"destacada": False}}
     )
- 
-    # Marcar esta como destacada
     db["resenas"].update_one(
         {"_id": ObjectId(resena_id)},
         {"$set": {"destacada": True}}
     )
     return {"mensaje": "Reseña destacada exitosamente"}
-
+ 
