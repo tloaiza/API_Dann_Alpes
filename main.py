@@ -154,3 +154,10 @@ def destacar_resena(resena_id: str):
         return {"mensaje": "Reseña destacada exitosamente"}
     except Exception as e:
         return {"mensaje": f"Error: {str(e)}"}
+
+
+# Endpoint de utilidad - llámalo UNA VEZ para arreglar el schema
+@app.get('/fix-schema')
+def fix_schema():
+    db.command("collMod", "resenas", validator={}, validationLevel="off")
+    return {"mensaje": "Schema de validación desactivado correctamente"}
