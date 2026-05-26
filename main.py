@@ -16,16 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.middleware("http")
-async def cors_fix(request: Request, call_next):
-    if request.method == "OPTIONS":
-        return JSONResponse({}, headers={"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "*", "Access-Control-Allow-Headers": "*"})
-    response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return response
-
-client = MongoClient(os.environ["MONGO_URI"])
-db = client["ISIS2304E11202610"]
 
 
 @app.get("/")
