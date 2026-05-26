@@ -149,8 +149,3 @@ def destacar_resena(resena_id: str):
     except Exception as e:
         return {"mensaje": f"Error: {str(e)}"}
 
-
-@app.get('/fix-schema')
-def fix_schema():
-    db.command("collMod", "resenas", validator={}, validationLevel="off")
-    return {"mensaje": "Schema de validación desactivado correctamente"}
