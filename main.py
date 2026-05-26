@@ -156,7 +156,6 @@ def destacar_resena(resena_id: str):
         return {"mensaje": f"Error: {str(e)}"}
 
 
-# Endpoint de utilidad - llámalo UNA VEZ para arreglar el schema
 @app.get('/fix-schema')
 def fix_schema():
     db.command("collMod", "resenas", validator={}, validationLevel="off")
