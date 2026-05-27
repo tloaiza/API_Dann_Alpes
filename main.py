@@ -27,6 +27,9 @@ def inicio():
     return {"estado": "API funcionando correctamente"}
 
 
+
+
+
 @app.post('/resenas')
 def crear_resena(datos: dict = Body(...)):
     
@@ -45,6 +48,9 @@ def crear_resena(datos: dict = Body(...)):
     return {"mensaje": "Reseña creada exitosamente", "id": str(resultado.inserted_id)}
 
 
+
+
+
 @app.put('/resenas/{resena_id}')
 def editar_resena(resena_id: str, datos: dict = Body(...)):
     
@@ -57,6 +63,9 @@ def editar_resena(resena_id: str, datos: dict = Body(...)):
     return {"mensaje": "Reseña editada exitosamente"}
 
 
+
+
+
 @app.delete('/resenas/{resena_id}')
 def eliminar_resena_cliente(resena_id: str):
     
@@ -67,6 +76,9 @@ def eliminar_resena_cliente(resena_id: str):
     )
     
     return {"mensaje": "Reseña eliminada exitosamente"}
+
+
+
 
 
 @app.get('/hoteles/{hotel_id}/resenas')
@@ -94,6 +106,9 @@ def get_resenas_hotel(hotel_id: int, orden: str = "fecha", pagina: int = 1, por_
     return {"resenas": destacadas + normales}
 
 
+
+
+
 @app.post('/resenas/{resena_id}/voto')
 def votar_resena(resena_id: str, datos: dict = Body(...)):
     
@@ -116,6 +131,9 @@ def votar_resena(resena_id: str, datos: dict = Body(...)):
         return {"mensaje": f"Error: {str(e)}"}
 
 
+
+
+
 @app.get('/usuarios/{usuario_id}/resenas')
 def get_resenas_usuario(usuario_id: int, orden: str = "fecha"):
     
@@ -133,6 +151,9 @@ def get_resenas_usuario(usuario_id: int, orden: str = "fecha"):
     return {"resenas": resenas}
 
 
+
+
+
 @app.put('/resenas/{resena_id}/respuesta')
 def responder_resena(resena_id: str, datos: dict = Body(...)):
     
@@ -144,6 +165,9 @@ def responder_resena(resena_id: str, datos: dict = Body(...)):
     return {"mensaje": "Respuesta registrada exitosamente"}
 
 
+
+
+
 @app.delete('/resenas/{resena_id}/admin')
 def eliminar_resena_admin(resena_id: str):
     
@@ -153,6 +177,9 @@ def eliminar_resena_admin(resena_id: str):
     )
     
     return {"mensaje": "Reseña eliminada por administrador"}
+
+
+
 
 
 @app.put('/resenas/{resena_id}/destacar')
@@ -175,6 +202,8 @@ def destacar_resena(resena_id: str):
         return {"mensaje": "Reseña destacada exitosamente"}
     except Exception as e:
         return {"mensaje": f"Error: {str(e)}"}
+    
+    
     
     
     
@@ -204,4 +233,67 @@ def rfc1_top_hoteles(fecha_inicio: str, fecha_fin: str):
     ]
     
     return list(db["resenas"].aggregate(pipeline))
+
+
+
+
+
+@app.get('/rfc/evolucion-hotel')
+def rfc2_evolucion(hotel_id: int, anio: int):
+    pipeline = [
+        
+        {"$match": {
+            "hotel_id": hotel_id,
+            "estado": "publicada",
+            "$expr": {"$eq": [{"$year": "$fecha_creacion"}, anio]}
+        }},
+        
+        {"$group": {
+            "_id": {"$month": "$fecha_creacion"},
+            "calificacion_promedio": {"$avg": "$calificacion"},
+            "total_resenas": {"$sum": 1}
+        }},
+        
+        {"$sort": {"_id": 1}}
+    ]
+    return list(db["resenas"].aggregate(pipeline))
+
+
+
+
+@app.get('/rfc/perfil-ciudad')
+def rfc3_perfil_ciudad(ciudad: str):
+    pipeline = [
+        
+        {"$match": {"ciudad": ciudad, "estado": "publicada"}},
+        
+        {"$group": {
+            "_id": "$hotel_id",
+            "hotel_nombre": {"$first": "$hotel_nombre"},
+            "calificacion_promedio": {"$avg": "$calificacion"},
+            "total_resenas": {"$sum": 1},
+            "con_respuesta": {
+                "$sum": {"$cond": [{"$ifNull": ["$respuesta_admin", False]}, 1, 0]}
+            },
+            "destacadas": {
+                "$sum": {"$cond": ["$destacada", 1, 0]}
+            }
+        }},
+        
+        {"$project": {
+            "hotel_nombre": 1,
+            "calificacion_promedio": {"$round": ["$calificacion_promedio", 2]},
+            "total_resenas": 1,
+            "pct_con_respuesta": {
+                "$round": [{"$multiply": [{"$divide": ["$con_respuesta", "$total_resenas"]}, 100]}, 1]
+            },
+            "pct_destacadas": {
+                "$round": [{"$multiply": [{"$divide": ["$destacadas", "$total_resenas"]}, 100]}, 1]
+            }
+        }},
+        
+        {"$sort": {"calificacion_promedio": -1}}
+    ]
+    return list(db["resenas"].aggregate(pipeline))
+
 
