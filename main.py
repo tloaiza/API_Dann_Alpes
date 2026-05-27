@@ -28,8 +28,6 @@ def inicio():
 
 
 
-
-
 @app.post('/resenas')
 def crear_resena(datos: dict = Body(...)):
     
@@ -122,8 +120,10 @@ def votar_resena(resena_id: str, datos: dict = Body(...)):
             return {"mensaje": "El usuario ya votó por esta reseña"}
         
         db["resenas"].update_one(
+            
             {"_id": ObjectId(resena_id)},
             {"$inc": {"votos_util": 1}, "$push": {"votantes": usuario_id}}
+            
         )
         
         return {"mensaje": "Voto registrado exitosamente"}
@@ -140,8 +140,10 @@ def get_resenas_usuario(usuario_id: int, orden: str = "fecha"):
     campo_orden = "fecha_creacion" if orden == "fecha" else "hotel_id"
     
     resenas = list(db["resenas"].find(
+        
         {"usuario_id": usuario_id},
         {"_id": 1, "hotel_id": 1, "calificacion": 1, "texto": 1, "fecha_creacion": 1, "estado": 1, "votos_util": 1, "respuesta_admin": 1}
+        
     ).sort(campo_orden, -1))
     
     for i in resenas:
@@ -158,8 +160,10 @@ def get_resenas_usuario(usuario_id: int, orden: str = "fecha"):
 def responder_resena(resena_id: str, datos: dict = Body(...)):
     
     db["resenas"].update_one(
+        
         {"_id": ObjectId(resena_id)},
         {"$set": {"respuesta_admin": {"texto": datos.get("texto"), "fecha": datetime.now()}}}
+        
     )
     
     return {"mensaje": "Respuesta registrada exitosamente"}
@@ -172,8 +176,10 @@ def responder_resena(resena_id: str, datos: dict = Body(...)):
 def eliminar_resena_admin(resena_id: str):
     
     db["resenas"].update_one(
+        
         {"_id": ObjectId(resena_id)},
         {"$set": {"estado": "eliminada"}}
+        
     )
     
     return {"mensaje": "Reseña eliminada por administrador"}
@@ -190,13 +196,17 @@ def destacar_resena(resena_id: str):
             return {"mensaje": "Reseña no encontrada"}
         
         db["resenas"].update_many(
+            
             {"hotel_id": resena["hotel_id"], "destacada": True},
             {"$set": {"destacada": False}}
+            
         )
         
         db["resenas"].update_one(
+            
             {"_id": ObjectId(resena_id)},
             {"$set": {"destacada": True}}
+            
         )
         
         return {"mensaje": "Reseña destacada exitosamente"}
