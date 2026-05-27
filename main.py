@@ -205,13 +205,12 @@ def destacar_resena(resena_id: str):
     
     
     
-    
-    
+   
+
 @app.get('/rfc/top-hoteles')
 def rfc1_top_hoteles(fecha_inicio: str, fecha_fin: str):
     
     pipeline = [
-        
         {"$match": {
             "estado": "publicada",
             "fecha_creacion": {
@@ -219,7 +218,6 @@ def rfc1_top_hoteles(fecha_inicio: str, fecha_fin: str):
                 "$lte": datetime.fromisoformat(fecha_fin)
             }
         }},
-        
         
         {"$group": {
             "_id": "$hotel_id",
@@ -240,6 +238,7 @@ def rfc1_top_hoteles(fecha_inicio: str, fecha_fin: str):
 
 @app.get('/rfc/evolucion-hotel')
 def rfc2_evolucion(hotel_id: int, anio: int):
+    
     pipeline = [
         
         {"$match": {
@@ -256,13 +255,16 @@ def rfc2_evolucion(hotel_id: int, anio: int):
         
         {"$sort": {"_id": 1}}
     ]
+    
     return list(db["resenas"].aggregate(pipeline))
+
 
 
 
 
 @app.get('/rfc/perfil-ciudad')
 def rfc3_perfil_ciudad(ciudad: str):
+    
     pipeline = [
         
         {"$match": {"ciudad": ciudad, "estado": "publicada"}},
@@ -294,6 +296,6 @@ def rfc3_perfil_ciudad(ciudad: str):
         
         {"$sort": {"calificacion_promedio": -1}}
     ]
+    
     return list(db["resenas"].aggregate(pipeline))
-
 
